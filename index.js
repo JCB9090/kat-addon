@@ -2,9 +2,9 @@ var Stremio = require("stremio-addons");
 var nameToImdb = require("name-to-imdb");
 var needle = require("needle");
 var feedparser = require("feedparser");
-// 1. torrentz.eu, kat.cr, bitsnoop, zamunda, http://www.1337x.to/	
+// 1. torrentz.eu, kickasstorrents.to, bitsnoop, zamunda, http://www.1337x.to/	
 var manifest = { 
-    "name": "Kat.cr",
+    "name": "Kick.asS",
     "description": "kickass torrents add-on for stremio",
     "icon": "URL to 256x256 monochrome png icon", 
     "background": "URL to 1366x756 png background",
@@ -26,7 +26,7 @@ var server = require("http").createServer(function (req, res) {
     addon.middleware(req, res, function() { res.end() }); // wire the middleware - also compatible with connect / express
 }).on("listening", function()
 {
-    console.log("KAT.cr Stremio Addon listening on "+server.address().port);
+    console.log("Kick.asS Stremio Addon listening on "+server.address().port);
 }).listen(process.env.PORT || 7321);
 
 // Streaming
@@ -76,7 +76,7 @@ var OPTS = {
 };
 
 function doQueries(queries, args, callback) {
-    var URL = "https://kat.cr/usearch/"+encodeURIComponent(queries[0])+"/?rss=1";
+    var URL = "https://kickasstorrents.to/usearch/"+encodeURIComponent(queries[0])+"/?rss=1";
 
     // todo async.each on all queries
     var stream = needle.get(URL, OPTS).pipe(new feedparser());
