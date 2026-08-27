@@ -1,9 +1,9 @@
 name: Matrix Task Cluster
 
 on:
+  repository_dispatch:
+    types: [run-task]
   workflow_dispatch:
-  schedule:
-    - cron: '0 * * * *'
 
 concurrency:
   group: pool-group-${{ github.workflow }}-${{ github.ref }}
